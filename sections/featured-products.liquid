@@ -1,0 +1,239 @@
+{{ 'featured-products.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'featured-products.js' | asset_url }}" defer="defer"></script>
+
+{%- liquid
+  assign products_to_render = section.settings.fallback_products
+  assign section_font = section.settings.font
+  assign section_font_bold = section_font | font_modify: 'weight', 'bold'
+
+  if recommendations.performed? and recommendations.products_count > 0
+    assign products_to_render = recommendations.products
+  endif
+
+  assign products_count = products_to_render.size
+
+  if products_count > section.settings.products_to_show
+    assign products_count = section.settings.products_to_show
+  endif
+-%}
+
+{%- style -%}
+  {{ section_font | font_face: font_display: 'swap' }}
+
+  {%- if section_font_bold != blank -%}
+    {{ section_font_bold | font_face: font_display: 'swap' }}
+  {%- endif -%}
+{%- endstyle -%}
+
+<featured-products
+  id="FeaturedProducts-{{ section.id }}"
+  class="featured-products"
+  data-section-id="{{ section.id }}"
+  data-product-id="{{ product.id }}"
+  data-products-count="{{ products_count }}"
+  data-recommendations-url="{{ routes.product_recommendations_url }}?section_id={{ section.id }}&product_id={{ product.id }}&limit={{ section.settings.products_to_show }}&intent=related"
+  style="
+    --featured-products-background: {{ section.settings.background_color }};
+    --featured-products-text: {{ section.settings.text_color }};
+    --featured-products-media-background: {{ section.settings.media_background_color }};
+    --featured-products-rating: {{ section.settings.rating_color }};
+    --featured-products-sale-background: {{ section.settings.sale_badge_background }};
+    --featured-products-sale-text: {{ section.settings.sale_badge_text_color }};
+    --featured-products-font-family: {{ section_font.family }}, {{ section_font.fallback_families }};
+  "
+>
+  <section
+    class="featured-products__section"
+    {% if section.settings.heading != blank %}
+      aria-labelledby="FeaturedProductsHeading-{{ section.id }}"
+    {% else %}
+      aria-label="Featured products"
+    {% endif %}
+  >
+    <div class="featured-products__header">
+      {%- if section.settings.heading != blank -%}
+        <h2
+          id="FeaturedProductsHeading-{{ section.id }}"
+          class="featured-products__heading"
+        >
+          {{ section.settings.heading | escape }}
+        </h2>
+      {%- endif -%}
+
+      <div
+        class="featured-products__controls{% if products_count <= 4 %} featured-products__controls--hidden{% endif %}"
+        data-slider-controls
+      >
+        <button
+          class="featured-products__arrow"
+          type="button"
+          aria-label="Show previous products"
+          data-slider-previous
+        >
+          <svg
+            aria-hidden="true"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <path
+              d="M15 18L9 12L15 6"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+
+        <button
+          class="featured-products__arrow"
+          type="button"
+          aria-label="Show next products"
+          data-slider-next
+        >
+          <svg
+            aria-hidden="true"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <path
+              d="M9 6L15 12L9 18"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    {%- if section.settings.description != blank -%}
+      <p class="featured-products__description">
+        {{ section.settings.description | escape }}
+      </p>
+    {%- endif -%}
+
+    {%- if products_count > 0 -%}
+      <ul
+        class="featured-products__slider"
+        role="list"
+        aria-label="{{ section.settings.heading | default: 'Featured products' | escape }}"
+        data-product-slider
+      >
+        {%- for card_product in products_to_render limit: section.settings.products_to_show -%}
+          <li class="featured-products__slide">
+            {% render 'featured-product-card',
+              card_product: card_product,
+              section_id: section.id
+            %}
+          </li>
+        {%- endfor -%}
+      </ul>
+    {%- elsif request.design_mode -%}
+      <p class="featured-products__empty">
+        Select fallback products in the section settings.
+      </p>
+    {%- endif -%}
+  </section>
+</featured-products>
+
+{% schema %}
+{
+  "name": "Featured products",
+  "tag": "section",
+  "class": "section-featured-products",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Featured products"
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "Lorem ipsum odor amet, consectetuer adipiscing elit. Suscipit lectus cursus phasellus ridiculus nostra fames. Sollicitudin mi facilisi congue tellus dictumst eu ligula arcu. Vivamus luctus vel duis tempor curabitur potenti rhoncus. Orci dictum et varius feugiat pulvinar euismod iaculis diam. Lacus inceptos vel fusce interdum molestie luctus cubilia."
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "label": "Maximum products",
+      "min": 4,
+      "max": 10,
+      "step": 1,
+      "default": 8
+    },
+    {
+      "type": "product_list",
+      "id": "fallback_products",
+      "label": "Fallback products",
+      "limit": 10,
+      "info": "These products are shown when Shopify returns no recommendations."
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "media_background_color",
+      "label": "Image background",
+      "default": "#F7F8FB"
+    },
+    {
+      "type": "color",
+      "id": "rating_color",
+      "label": "Rating stars",
+      "default": "#FFC700"
+    },
+    {
+      "type": "color",
+      "id": "sale_badge_background",
+      "label": "Sale badge background",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "sale_badge_text_color",
+      "label": "Sale badge text",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "font_picker",
+      "id": "font",
+      "label": "Font",
+      "default": "inter_n4"
+    },
+  ],
+  "presets": [
+    {
+      "name": "Featured products"
+    }
+  ]
+}
+{% endschema %}

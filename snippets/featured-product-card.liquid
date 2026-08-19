@@ -1,0 +1,128 @@
+{%- liquid
+  assign product_variant = card_product.selected_or_first_available_variant
+  assign product_image = card_product.featured_media.preview_image
+  assign product_description = card_product.description | strip_html | strip
+  assign image_alt = product_image.alt | default: card_product.title
+
+  assign is_on_sale = false
+  assign savings = 0
+
+  if product_variant.compare_at_price != blank and product_variant.compare_at_price > product_variant.price
+    assign is_on_sale = true
+    assign savings = product_variant.compare_at_price | minus: product_variant.price
+  endif
+
+  assign rating_data = card_product.metafields.reviews.rating.value
+  assign rating_value = rating_data.rating
+  assign rating_max = rating_data.scale_max
+  assign rating_percentage = 0
+
+  if rating_value != blank and rating_max != blank and rating_max > 0
+    assign rating_percentage = rating_value | times: 1.0 | divided_by: rating_max | times: 100
+  endif
+-%}
+
+<article
+  id="FeaturedProductCard-{{ section_id }}-{{ card_product.id }}"
+  class="featured-product-card"
+>
+  <a
+    class="featured-product-card__media"
+    href="{{ card_product.url }}"
+    aria-label="{{ card_product.title | escape }}"
+  >
+    {%- if product_image != blank -%}
+      {{
+        product_image
+        | image_url: width: 900
+        | image_tag:
+          class: 'featured-product-card__image',
+          widths: '246, 300, 492, 600, 900',
+          sizes: '(max-width: 749px) 246px, 300px',
+          loading: 'lazy',
+          alt: image_alt
+      }}
+    {%- else -%}
+      {{
+        'product-1'
+        | placeholder_svg_tag: 'featured-product-card__placeholder'
+      }}
+    {%- endif -%}
+
+    {%- if is_on_sale -%}
+      <span class="featured-product-card__sale-badge">
+        Save {{ savings | money_without_trailing_zeros }}
+      </span>
+    {%- endif -%}
+  </a>
+
+  <div class="featured-product-card__information">
+    {%- if rating_value != blank -%}
+      <div
+        class="featured-product-card__rating"
+        aria-label="{{ rating_value }} out of {{ rating_max }} stars"
+      >
+        <span
+          class="featured-product-card__stars"
+          aria-hidden="true"
+          style="--rating-percentage: {{ rating_percentage }}%;"
+        >
+          <span class="featured-product-card__stars-background">
+            {%- for star_index in (1..5) -%}
+              <svg viewBox="0 0 16 16" width="16" height="16">
+                <path
+                  fill="currentColor"
+                  d="M8 1.25L10.09 5.485L14.763 6.164L11.382 9.46L12.18 14.114L8 11.918L3.82 14.114L4.618 9.46L1.237 6.164L5.91 5.485L8 1.25Z"
+                />
+              </svg>
+            {%- endfor -%}
+          </span>
+
+          <span class="featured-product-card__stars-value">
+            {%- for star_index in (1..5) -%}
+              <svg viewBox="0 0 16 16" width="16" height="16">
+                <path
+                  fill="currentColor"
+                  d="M8 1.25L10.09 5.485L14.763 6.164L11.382 9.46L12.18 14.114L8 11.918L3.82 14.114L4.618 9.46L1.237 6.164L5.91 5.485L8 1.25Z"
+                />
+              </svg>
+            {%- endfor -%}
+          </span>
+        </span>
+
+        <span class="featured-product-card__rating-value">
+          {{ rating_value }}
+        </span>
+      </div>
+    {%- endif -%}
+
+    <div class="featured-product-card__headings">
+      <h3 class="featured-product-card__title">
+        <a href="{{ card_product.url }}">
+          {{ card_product.title | escape }}
+        </a>
+      </h3>
+
+      {%- if product_description != blank -%}
+        <p
+          class="featured-product-card__description"
+          title="{{ product_description | escape }}"
+        >
+          {{ product_description }}
+        </p>
+      {%- endif -%}
+    </div>
+
+    <div class="featured-product-card__price">
+      {%- if is_on_sale -%}
+        <s class="featured-product-card__compare-price">
+          {{ product_variant.compare_at_price | money_without_trailing_zeros }}
+        </s>
+      {%- endif -%}
+
+      <span class="featured-product-card__current-price">
+        {{ product_variant.price | money_without_trailing_zeros }}
+      </span>
+    </div>
+  </div>
+</article>
